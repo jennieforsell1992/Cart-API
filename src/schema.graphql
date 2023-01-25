@@ -1,0 +1,36 @@
+type Cart {
+  id: ID
+  totalamount: Int
+}
+
+type Product {
+  productId: ID
+  productName: String
+  price: Int
+}
+
+type DeletedResourceResponse {
+  deletedId: ID
+  success: Boolean
+}
+
+type Query {
+  getAllCarts: [Cart]
+  getCartById(cartId: ID!): Cart
+}
+
+type Mutation {
+  createCart(id: ID!, totalamount: Int!): Cart
+  createProduct(input: CreateProductInput): Product
+
+  updateCartTotalamount(totalamount: Int!, price: Int!): Cart
+
+  deleteCart(cartId: ID!): DeletedResourceResponse
+  deleteProduct(productId: ID!): DeletedResourceResponse
+}
+
+input CreateProductInput {
+  productId: ID!
+  productName: String!
+  price: Int!
+}
