@@ -10,7 +10,7 @@ const { GraphQLError, printType } = require("graphql");
 const crypto = require("crypto");
 
 const cartDirectory = path.join(__dirname, "..", "data", "carts");
-const cartProductDirectory = path.join(__dirname, "..", "data", "carts");
+const productDirectory = path.join(__dirname, "..", "data", "products");
 
 exports.resolvers = {
   Query: {
@@ -39,7 +39,7 @@ exports.resolvers = {
 
       const cartExists = await fileExists(cartFilePath);
 
-      if (!cartExists) return new GraphQLError("That project does not exist");
+      if (!cartExists) return new GraphQLError("That cart does not exist");
 
       const cartData = await fsPromises.readFile(cartFilePath, {
         encoding: "utf-8",
@@ -55,7 +55,8 @@ exports.resolvers = {
     createCart: async (_, args) => {
       const newCart = {
         id: crypto.randomUUID(),
-        totalamount: args.totalamount,
+        totalamount: 0,
+        products: [],
       };
 
       let filePath = path.join(cartDirectory, `${newCart.id}.json`);
@@ -79,26 +80,27 @@ exports.resolvers = {
     },
 
     createProduct: async (_, args) => {
+      const { productName, price } = args.input;
+      const id = crypto.randomUUID();
+
       const newProduct = {
-        productId: crypto.randomUUID(),
-        productName: args.productName,
-        price: args.price,
+        productId: id,
+        productName: productName,
+        price: price,
       };
 
-      let filePath = path.join(
-        cartProductDirectory,
-        readJsonFile(id.json),
-        `${newProduct.id}.json`
-      );
+      let filePath = path.join(productDirectory, `${newProduct.id}.json`);
 
       let idExists = true;
       while (idExists) {
         const exists = await fileExists(filePath);
-        console.log(exists, newProduct.id);
 
         if (exists) {
-          newCart.id = crypto.randomUUID();
-          filePath = path.join(cartProductDirectory, `${newProduct.id}.json`);
+          newProduct.productId = crypto.randomUUID();
+          filePath = path.join(
+            productDirectory,
+            `${newProduct.productId}.json`
+          );
         }
 
         idExists = exists;
@@ -109,20 +111,48 @@ exports.resolvers = {
       return newProduct;
     },
 
-    updateCartTotalamount: async (_, args) => {
-      const { id, totalamount } = args;
+    addProductToCart: async (_, args) => {
+      const { cartId, productId } = args;
 
-      const filePath = path.join(cartDirectory, `${totalamount}.json`);
+      const filePath = path.join(cartDirectory, `${cartId}.json`);
+      const shoppingcartExists = await fileExists(filePath);
 
-      const cartExists = await fileExists(filePath);
-      if (!cartExists) return new GraphQLError("That Cart does not exist");
+      if (!shoppingcartExists) {
+        return new GraphQLError("This cart doesn't exist!");
+      }
 
-      const updatedCart = {
-        id,
-        totalamount,
-      };
+      const productFilepath = path.join(productDirectory, `${productId}.json`);
+      const productExists = await fileExists(productFilepath);
+
+      if (!productExists) {
+        return new GraphQLError("This product doesn't exist!");
+      }
+
+      const cartContents = await fsPromises.readFile(filePath, {
+        encoding: "utf-8",
+      });
+
+      let shoppingcart = JSON.parse(cartContents);
+
+      const fileContents = await fsPromises.readFile(productFilepath, {
+        encoding: "utf-8",
+      });
+
+      const productToCart = JSON.parse(fileContents);
+
+      const products = shoppingcart.products;
+      shoppingcart.products.push(productToCart);
+
+      let totalamount = 0;
+      for (let i = 0; i < shoppingcart.products.length; i++) {
+        totalamount += shoppingcart.products[i].price;
+      }
+
+      const updatedCart = { cartId, products, totalamount };
 
       await fsPromises.writeFile(filePath, JSON.stringify(updatedCart));
+
+      // console.log(shoppingcart.products);
 
       return updatedCart;
     },
@@ -135,7 +165,7 @@ exports.resolvers = {
       // does this project exist?
       // If no (return error)
       const cartExists = await fileExists(filePath);
-      if (!cartExists) return new GraphQLError("That project does not exist");
+      if (!cartExists) return new GraphQLError("That caart does not exist");
 
       // delete file
       try {
@@ -153,6 +183,31 @@ exports.resolvers = {
       };
     },
 
-    deleteProduct: async (_, args) => {},
+    deleteProduct: async (_, args) => {
+      // get project id
+      const productId = args.productId;
+
+      const filePath = path.join(productDirectory, `${productId}.json`);
+      // does this project exist?
+      // If no (return error)
+      const productExists = await fileExists(filePath);
+      if (!productExists)
+        return new GraphQLError("That product does not exist");
+
+      // delete file
+      try {
+        await deleteFile(filePath);
+      } catch (error) {
+        return {
+          deletedId: productId,
+          success: false,
+        };
+      }
+
+      return {
+        deletedId: productId,
+        success: true,
+      };
+    },
   },
 };

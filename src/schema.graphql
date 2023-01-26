@@ -1,6 +1,7 @@
 type Cart {
   id: ID
   totalamount: Int
+  products: [Product]
 }
 
 type Product {
@@ -23,7 +24,7 @@ type Mutation {
   createCart(id: ID!, totalamount: Int!): Cart
   createProduct(input: CreateProductInput): Product
 
-  updateCartTotalamount(totalamount: Int!, price: Int!): Cart
+  addProductToCart(cartId: ID!, productId: ID!): Cart
 
   deleteCart(cartId: ID!): DeletedResourceResponse
   deleteProduct(productId: ID!): DeletedResourceResponse
