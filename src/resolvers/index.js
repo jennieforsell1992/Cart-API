@@ -2,7 +2,6 @@ const path = require("path");
 const fsPromises = require("fs/promises");
 const {
   fileExists,
-  readJsonFile,
   deleteFile,
   getDirectoryFileNames,
 } = require("../utils/fileHandling");
